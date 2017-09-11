@@ -1,0 +1,15 @@
+{
+    "name": "carbonite",
+    "version": "0.1.0",
+    "description": "",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "build": "webpack"
+    },
+    "author": "Andrey Roenko <flapenguin@yandex-team.ru>",
+    "devDependencies": {
+        "typescript": "^2.5.2",
+        "ts-loader": "^2.3.7",
+        "webpack": "^3.5.6"
+    }
+}

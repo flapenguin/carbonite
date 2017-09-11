@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "target": "es3",
+        "module": "commonjs",
+        "rootDir": "./src",
+        "lib": [
+            "es5",
+            "dom",
+            "es2015.promise"
+        ],
+        "strict": true
+    }
+}
