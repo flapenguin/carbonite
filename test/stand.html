@@ -7,8 +7,45 @@
     <title>Carbonite test stand</title>
 
     <script src="../dist/carbonite.js"></script>
+    <style>
+        #container {
+            display: inline-block;
+            box-sizing: border-box;
+        }
+
+        #result {
+            border: 1px solid black;
+        }
+
+        .row {
+            display: block;
+        }
+    </style>
 </head>
 <body>
+    <div class="row">
+        <textarea id="input" cols="30" rows="10"></textarea>
+    </div>
+    <div class="row">
+        <button id="render" onclick="render()">render</button>
+    </div>
 
+    <div class="row">
+        <div id="container"></div>
+    </div>
+
+    <div class="row">
+        <img id="result">
+    </div>
+
+    <script>
+        function render() {
+            container.innerHTML = input.value;
+            carbonite.render(container, { size: container.getBoundingClientRect() })
+                .then(function (resource) {
+                    result.src = resource.url;
+                });
+        }
+    </script>
 </body>
 </html>
