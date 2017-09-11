@@ -4,12 +4,14 @@
     "description": "",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "build": "webpack"
+        "build": "webpack",
+        "lint": "tslint -p ."
     },
     "author": "Andrey Roenko <flapenguin@yandex-team.ru>",
     "devDependencies": {
-        "typescript": "^2.5.2",
         "ts-loader": "^2.3.7",
+        "tslint": "^5.7.0",
+        "typescript": "^2.5.2",
         "webpack": "^3.5.6"
     }
 }
