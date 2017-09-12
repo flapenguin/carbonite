@@ -77,12 +77,16 @@ export function fromCanvas(canvas: HTMLCanvasElement, mime: string, type?: Type)
 }
 
 export function getResourceTypeForForeignObjectSvg(csp: ICsp): Type {
-    if (csp.enabled) {
+    // We require data: in image-src, but not blob:.
+    if (csp.enabled && !csp.imageBlob) {
         return 'data-url';
     }
+
+    // Chromiums taint canvas after rendering blobs with <foreignObject>. Data URI is fine though.
+    // https://bugs.chromium.org/p/chromium/issues/detail?id=294129
     if (browser.isChromium) {
         return 'data-url';
     }
 
-    return areBlobsSupported ? 'blob' : 'data-url';
+    return areBlobsSupported(csp) ? 'blob' : 'data-url';
 }

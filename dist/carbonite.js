@@ -72,6 +72,11 @@ var carbonite =
 
 exports.__esModule = true;
 var ua = navigator.userAgent;
+exports.engine = /WebKit\//.test(ua) ? 'webkit' :
+    /Gecko\//.test(ua) ? 'gecko' :
+        /Opera\//.test(ua) ? 'presto' :
+            /Trident\//.test(ua) ? 'trident' :
+                'unknown';
 exports.isChromium = /(Chromium|Chrome|Ya(ndex)?Browser)\//.test(ua);
 exports.isSafari = /Safari\//.test(ua) && !exports.isChromium;
 exports.isFirefox = /(Firefox|Fennec|Gecko)\//.test(ua);
@@ -122,8 +127,8 @@ function render(node, options) {
     }
     try {
         var stylesheet = new StyleSheet_1.StyleSheet();
-        node = inlineStyles_1.inlineStyles(node, stylesheet);
-        var svg = htmlToSvg_1.htmlToSvg(node, stylesheet, options.size, csp);
+        var inlined = inlineStyles_1.inlineStyles(node, stylesheet);
+        var svg = htmlToSvg_1.htmlToSvg(inlined, stylesheet, options.size, csp);
         if (options.mime === 'image/svg+xml') {
             return Promise.resolve(Resource_1.fromString(svg, options.mime, options.type));
         }
@@ -215,13 +220,16 @@ function fromCanvas(canvas, mime, type) {
 }
 exports.fromCanvas = fromCanvas;
 function getResourceTypeForForeignObjectSvg(csp) {
-    if (csp.enabled) {
+    // We require data: in image-src, but not blob:.
+    if (csp.enabled && !csp.imageBlob) {
         return 'data-url';
     }
+    // Chromiums taint canvas after rendering blobs with <foreignObject>. Data URI is fine though.
+    // https://bugs.chromium.org/p/chromium/issues/detail?id=294129
     if (browser.isChromium) {
         return 'data-url';
     }
-    return support_1.areBlobsSupported ? 'blob' : 'data-url';
+    return support_1.areBlobsSupported(csp) ? 'blob' : 'data-url';
 }
 exports.getResourceTypeForForeignObjectSvg = getResourceTypeForForeignObjectSvg;
 
@@ -239,20 +247,32 @@ exports.URL = window.URL
     || window.mozURL
     || window;
 exports.isSupported = function (csp) {
+    // IE doesn't support foreignObject.
     return !browser.isIE
+        // TODO: test on mobile browsers.
         && !browser.isMobile
+        // No way to make Firefox load svg with styles inside into <img> if
+        // we don't have 'nonce-...' in style-src.
+        // TODO: maybe detect style-src 'unsafe-inline' somehow and then use
+        // style attributes?
+        // https://bugzilla.mozilla.org/show_bug.cgi?id=1358106
         && !(browser.isFirefox && csp.enabled && !csp.styleNonce)
         && typeof XMLSerializer !== 'undefined';
 };
 exports.isNonSvgSupported = function (csp) {
     return exports.isSupported(csp)
+        // Safari and old versions of Opera have trouble rendering foreignObject.
         && !browser.isSafari
         && !browser.isOldOpera
+        // Edge silently fails to drawImage SVG after onload.
+        // https://developer.microsoft.com/en-us/microsoft-edge/platform/issues/4411619/
         && !browser.isEdge;
 };
 exports.areBlobsSupported = function (csp) {
-    return window.Blob
+    return typeof Blob !== 'undefined'
         && exports.URL.createObjectURL
+        // Safari doesn't want to load SVG blobs with foreignObject inside.
+        // Also, Safari can't render anything, so blobs are useless for a canvas too.
         && !browser.isSafari;
 };
 
@@ -284,11 +304,101 @@ exports.encode = encode;
 "use strict";
 
 exports.__esModule = true;
+var cssomKeyToCssKey_1 = __webpack_require__(9);
+var browser = __webpack_require__(0);
+var temporaryDom = __webpack_require__(7);
+// Ignored styles. They won't add anything to render.
+var ignoredStyles = /^(transition|cursor|animation|userSelect)/;
+// Partial styles to skip while inlining for webkit browsers.
+// For example, the value of borderTop is already contained in border.
+// Adding it will just make the style longer.
+// Firefox doesn't build the full style, so for the example above, only borderTop will be set.
+var partialStyles = browser.engine !== 'webkit'
+    ? /^(?=a)b/ // Dummy regex that fails on any string.
+    : /^(background|outline|border|webkitBorder(Before|After|End|Start))[A-Z]/;
 function inlineStyles(node, stylesheet) {
-    // TODO
-    return node;
+    if (!node) {
+        throw new Error("inlineStyles: node must be not null");
+    }
+    if (node.nodeType === Node.TEXT_NODE) {
+        return document.createTextNode(node.textContent || '');
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+        return null;
+    }
+    return inlineElementStyles(node, stylesheet);
 }
 exports.inlineStyles = inlineStyles;
+function inlineElementStyles(node, stylesheet) {
+    if (node.style.display === 'none') {
+        return document.createComment("<" + node.tagName + "> with display: none");
+    }
+    if (node.tagName.toLowerCase() === 'img') {
+        return document.createComment("skipped " + node.outerHTML);
+    }
+    var newNode = document.createElement(node.tagName);
+    var desiredStyle = getComputedStyle(node);
+    // getComputedStyle requires the node to be in the document.
+    var tempDom = temporaryDom.append(newNode);
+    // Create a copy of the default style, because CSSStyleDeclaration auto updates itself.
+    var defaultStyle = clone(getComputedStyle(newNode));
+    tempDom.dispose();
+    var styles = [];
+    for (var key in desiredStyle) {
+        // Skip JavaScript stuff.
+        if (/^(\d+|length|cssText)$|-/.test(key)) {
+            continue;
+        }
+        if (ignoredStyles.test(key) || partialStyles.test(key)) {
+            continue;
+        }
+        var value = desiredStyle[key];
+        var type = typeof value;
+        // Skip more JavaScript stuff.
+        if (type === 'function' || type === 'undefined' || value == null) {
+            continue;
+        }
+        // Skip styles that are already implicitly applied to the node.
+        if (defaultStyle[key] === desiredStyle[key]) {
+            continue;
+        }
+        // Skip empty styles.
+        value = String(value);
+        if (value === '') {
+            continue;
+        }
+        styles.push(cssomKeyToCssKey_1.cssomKeyToCssKey(key) + ':' + value + ';');
+    }
+    // setAttribute('style', ...) triggers CSP warnings everywhere.
+    // Setting CSSOM value directly makes XMLSerializer output them in style attribute.
+    // This works in Chromiums, but Firefox fails to render foreignObject with style attributes.
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=1358106
+    newNode.className = stylesheet.createClass(styles.join(''));
+    newNode.setAttribute('data-carbonite-class', node.getAttribute('class') || '');
+    // Create inlined versions of child nodes and append them.
+    // tslint:disable-next-line:prefer-for-of
+    for (var i = 0; i < node.childNodes.length; i++) {
+        var child = node.childNodes[i];
+        var newChild = inlineStyles(child, stylesheet);
+        if (newChild) {
+            newNode.appendChild(newChild);
+        }
+    }
+    return newNode;
+}
+var hop = ({}).hasOwnProperty;
+function clone(object) {
+    var result = {};
+    for (var key in object) {
+        if (hop.call(object, key)) {
+            result[key] = object[key];
+        }
+    }
+    return result;
+}
+function getComputedStyle(e) {
+    return e.ownerDocument.defaultView.getComputedStyle(e);
+}
 
 
 /***/ }),

@@ -1,5 +1,11 @@
 const ua = navigator.userAgent;
 
+export const engine = /WebKit\//.test(ua) ? 'webkit' :
+    /Gecko\//.test(ua) ? 'gecko' :
+    /Opera\//.test(ua) ? 'presto' :
+    /Trident\//.test(ua) ? 'trident' :
+    'unknown';
+
 export const isChromium = /(Chromium|Chrome|Ya(ndex)?Browser)\//.test(ua);
 
 export const isSafari = /Safari\//.test(ua) && !isChromium;

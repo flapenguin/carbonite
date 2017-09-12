@@ -46,8 +46,8 @@ export function render(node: HTMLElement, options: IRenderOptions): Promise<IRes
     try {
         const stylesheet = new StyleSheet();
 
-        node = inlineStyles(node, stylesheet);
-        const svg = htmlToSvg(node, stylesheet, options.size, csp);
+        const inlined = inlineStyles(node, stylesheet) as HTMLElement;
+        const svg = htmlToSvg(inlined, stylesheet, options.size, csp);
 
         if (options.mime === 'image/svg+xml') {
             return Promise.resolve(fromString(svg, options.mime, options.type));
