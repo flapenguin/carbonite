@@ -18,7 +18,7 @@ export const isNonSvgSupported = (csp: ICsp) =>
     && !browser.isOldOpera
     && !browser.isEdge;
 
-export const areBlobsSupported =
+export const areBlobsSupported = (csp: ICsp) =>
     window.Blob
     && URL.createObjectURL
     && !browser.isSafari;

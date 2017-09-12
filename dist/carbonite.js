@@ -102,24 +102,45 @@ var inlineStyles_1 = __webpack_require__(5);
 var withLoadedImage_1 = __webpack_require__(6);
 var StyleSheet_1 = __webpack_require__(8);
 var htmlToSvg_1 = __webpack_require__(10);
+var support_1 = __webpack_require__(3);
 function render(node, options) {
     var csp = options.csp || { enabled: false };
-    var stylesheet = new StyleSheet_1.StyleSheet();
-    node = inlineStyles_1.inlineStyles(node, stylesheet);
-    var svg = htmlToSvg_1.htmlToSvg(node, stylesheet, options.size, csp);
-    if (options.mime === 'image/svg+xml') {
-        return Promise.resolve(Resource_1.fromString(svg, options.mime, options.type));
+    var nonSvgSupported = support_1.isNonSvgSupported(csp);
+    var type = options.type || Resource_1.defaultType;
+    var mime = options.mime || (nonSvgSupported ? 'image/png' : 'image/svg+xml');
+    if (!support_1.isSupported(csp)) {
+        return Promise.reject(new Error("carbonite: render is not supported"));
     }
-    var svgResource = Resource_1.fromString(svg, 'image/svg+xml', Resource_1.getResourceTypeForForeignObjectSvg(csp));
-    var canvas = document.createElement('canvas');
-    var ctx = canvas.getContext('2d');
-    canvas.width = options.size.width;
-    canvas.height = options.size.height;
-    return withLoadedImage_1.withLoadedImage(svgResource.url, function (img) { return ctx.drawImage(img, 0, 0); })
-        .then(function () {
-        svgResource.destroy();
-        return Resource_1.fromCanvas(canvas, options.mime, options.type);
-    });
+    if (type === 'blob' && !support_1.areBlobsSupported(csp)) {
+        return Promise.reject(new Error("carbonite: blobs are not supported"));
+    }
+    if (mime !== 'image/svg+xml' && !nonSvgSupported) {
+        return Promise.reject(new Error("carbonite: only 'image/svg+xml' mime is supported"));
+    }
+    if (!document.body.contains(node)) {
+        return Promise.reject(new Error("carbonite: node must be in document"));
+    }
+    try {
+        var stylesheet = new StyleSheet_1.StyleSheet();
+        node = inlineStyles_1.inlineStyles(node, stylesheet);
+        var svg = htmlToSvg_1.htmlToSvg(node, stylesheet, options.size, csp);
+        if (options.mime === 'image/svg+xml') {
+            return Promise.resolve(Resource_1.fromString(svg, options.mime, options.type));
+        }
+        var svgResource_1 = Resource_1.fromString(svg, 'image/svg+xml', Resource_1.getResourceTypeForForeignObjectSvg(csp));
+        var canvas_1 = document.createElement('canvas');
+        var ctx_1 = canvas_1.getContext('2d');
+        canvas_1.width = options.size.width;
+        canvas_1.height = options.size.height;
+        return withLoadedImage_1.withLoadedImage(svgResource_1.url, function (img) { return ctx_1.drawImage(img, 0, 0); })
+            .then(function () {
+            svgResource_1.destroy();
+            return Resource_1.fromCanvas(canvas_1, mime, type);
+        });
+    }
+    catch (e) {
+        return Promise.reject(e);
+    }
 }
 exports.render = render;
 
@@ -229,9 +250,11 @@ exports.isNonSvgSupported = function (csp) {
         && !browser.isOldOpera
         && !browser.isEdge;
 };
-exports.areBlobsSupported = window.Blob
-    && exports.URL.createObjectURL
-    && !browser.isSafari;
+exports.areBlobsSupported = function (csp) {
+    return window.Blob
+        && exports.URL.createObjectURL
+        && !browser.isSafari;
+};
 
 
 /***/ }),
