@@ -307,6 +307,9 @@ exports.__esModule = true;
 var cssomKeyToCssKey_1 = __webpack_require__(9);
 var browser = __webpack_require__(0);
 var temporaryDom = __webpack_require__(7);
+// Css rules that cannot be cut off.
+// transform-origin is buggy in Chromiums.
+var forcedStyles = /^transform-origin^/;
 // Ignored styles. They won't add anything to render.
 var ignoredStyles = /^(transition|cursor|animation|userSelect)/;
 // Partial styles to skip while inlining for webkit browsers.
@@ -333,10 +336,12 @@ function inlineElementStyles(node, stylesheet) {
     if (node.style.display === 'none') {
         return document.createComment("<" + node.tagName + "> with display: none");
     }
-    if (node.tagName.toLowerCase() === 'img') {
+    var tagName = node.tagName.toLowerCase();
+    if (tagName === 'img') {
         return document.createComment("skipped " + node.outerHTML);
     }
-    var newNode = document.createElement(node.tagName);
+    var newTagName = tagName === 'canvas' ? 'div' : 'canvas';
+    var newNode = document.createElement(newTagName);
     var desiredStyle = getComputedStyle(node);
     // getComputedStyle requires the node to be in the document.
     var tempDom = temporaryDom.append(newNode);
@@ -358,16 +363,27 @@ function inlineElementStyles(node, stylesheet) {
         if (type === 'function' || type === 'undefined' || value == null) {
             continue;
         }
+        var forced = forcedStyles.test(key);
         // Skip styles that are already implicitly applied to the node.
-        if (defaultStyle[key] === desiredStyle[key]) {
+        if (defaultStyle[key] === desiredStyle[key] && !forced) {
             continue;
         }
         // Skip empty styles.
         value = String(value);
-        if (value === '') {
+        if (value === '' && !forced) {
             continue;
         }
         styles.push(cssomKeyToCssKey_1.cssomKeyToCssKey(key) + ':' + value + ';');
+    }
+    // Try to save data from canvas.
+    if (tagName === 'canvas') {
+        try {
+            var dataUrl = node.toDataURL();
+            styles.push("background-image: url(\"" + dataUrl + "\");");
+        }
+        catch (e) {
+            // nop
+        }
     }
     // setAttribute('style', ...) triggers CSP warnings everywhere.
     // Setting CSSOM value directly makes XMLSerializer output them in style attribute.

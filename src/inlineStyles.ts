@@ -3,6 +3,10 @@ import { cssomKeyToCssKey } from './cssomKeyToCssKey';
 import * as browser from './browser';
 import * as temporaryDom from './temporaryDom';
 
+// Css rules that cannot be cut off.
+// transform-origin is buggy in Chromiums.
+const forcedStyles = /^transform-origin^/;
+
 // Ignored styles. They won't add anything to render.
 const ignoredStyles = /^(transition|cursor|animation|userSelect)/;
 
@@ -35,11 +39,13 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Node {
         return document.createComment(`<${node.tagName}> with display: none`);
     }
 
-    if (node.tagName.toLowerCase() === 'img') {
+    const tagName = node.tagName.toLowerCase();
+    if (tagName === 'img') {
         return document.createComment(`skipped ${node.outerHTML}`);
     }
 
-    const newNode = document.createElement(node.tagName);
+    const newTagName = tagName === 'canvas' ? 'div' : 'canvas';
+    const newNode = document.createElement(newTagName);
     const desiredStyle = getComputedStyle(node);
 
     // getComputedStyle requires the node to be in the document.
@@ -68,18 +74,30 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Node {
             continue;
         }
 
+        const forced = forcedStyles.test(key);
+
         // Skip styles that are already implicitly applied to the node.
-        if (defaultStyle[key] === desiredStyle[key]) {
+        if (defaultStyle[key] === desiredStyle[key] && !forced) {
             continue;
         }
 
         // Skip empty styles.
         value = String(value);
-        if (value === '') {
+        if (value === '' && !forced) {
             continue;
         }
 
         styles.push(cssomKeyToCssKey(key) + ':' + value + ';');
+    }
+
+    // Try to save data from canvas.
+    if (tagName === 'canvas') {
+        try {
+            const dataUrl = (node as HTMLCanvasElement).toDataURL();
+            styles.push(`background-image: url("${dataUrl}");`);
+        } catch (e) {
+            // nop
+        }
     }
 
     // setAttribute('style', ...) triggers CSP warnings everywhere.
