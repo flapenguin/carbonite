@@ -9,7 +9,7 @@ export const URL = window.URL
 export const isSupported = (csp: ICsp) =>
     !browser.isIE
     && !browser.isMobile
-    && !(browser.isGecko && csp.enabled && !csp.styleNonce)
+    && !(browser.isFirefox && csp.enabled && !csp.styleNonce)
     && typeof XMLSerializer !== 'undefined';
 
 export const isNonSvgSupported = (csp: ICsp) =>

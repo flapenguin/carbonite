@@ -73,15 +73,21 @@ var carbonite =
 exports.__esModule = true;
 var ua = navigator.userAgent;
 exports.isChromium = /(Chromium|Chrome|Ya(ndex)?Browser)\//.test(ua);
-exports.isSafari = /Safari\//.test(ua);
-exports.isGecko = /(Firefox|Fennec|Gecko)\//.test(ua);
+exports.isSafari = /Safari\//.test(ua) && !exports.isChromium;
+exports.isFirefox = /(Firefox|Fennec|Gecko)\//.test(ua);
 exports.isIE = /MSIE/.test(ua);
-// TODO
-exports.isOldOpera = false;
-// TODO
-exports.isEdge = false;
-// TODO
-exports.isMobile = false;
+exports.isEdge = /Edge/.test(ua);
+exports.isOldOpera = /Opera[/ ]/.test(ua)
+    && !exports.isChromium
+    && extractVersion(/(?:Version|Opera[/ ])\/([0-9][0-9\.]*)/) <= 12;
+// In summary, we recommend looking for the string “Mobi”
+// anywhere in the User Agent to detect a mobile device.
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Browser_detection_using_the_user_agent
+exports.isMobile = /Mobi/.test(ua);
+function extractVersion(regex) {
+    var match = ua.match(regex);
+    return match ? parseInt(match[1], 10) : 0;
+}
 
 
 /***/ }),
@@ -214,7 +220,7 @@ exports.URL = window.URL
 exports.isSupported = function (csp) {
     return !browser.isIE
         && !browser.isMobile
-        && !(browser.isGecko && csp.enabled && !csp.styleNonce)
+        && !(browser.isFirefox && csp.enabled && !csp.styleNonce)
         && typeof XMLSerializer !== 'undefined';
 };
 exports.isNonSvgSupported = function (csp) {
@@ -236,9 +242,14 @@ exports.areBlobsSupported = window.Blob
 
 exports.__esModule = true;
 function encode(str) {
-    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function (_, byte) {
-        return String.fromCharCode(parseInt(byte, 16));
-    }));
+    // Since DOMStrings are 16-bit-encoded strings, in most browsers
+    // calling window.btoa on a Unicode string will cause
+    // a Character Out Of Range exception if a character exceeds
+    // the range of a 8-bit byte (0x00~0xFF).
+    // https://developer.mozilla.org/en-US/docs/Web/API/WindowBase64/Base64_encoding_and_decoding#The_Unicode_Problem
+    str = encodeURIComponent(str)
+        .replace(/%([0-9A-F]{2})/g, function (_, byte) { return String.fromCharCode(parseInt(byte, 16)); });
+    return btoa(str);
 }
 exports.encode = encode;
 
