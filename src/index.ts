@@ -28,19 +28,23 @@ export function render(node: HTMLElement, options: IRenderOptions): Promise<IRes
     const mime = options.mime || (nonSvgSupported ? 'image/png' : 'image/svg+xml');
 
     if (!isSupported(csp)) {
-        return Promise.reject(new Error(`carbonite: render is not supported`));
+        return Promise.reject(new Error('carbonite: render is not supported'));
     }
 
     if (type === 'blob' && !areBlobsSupported(csp)) {
-        return Promise.reject(new Error(`carbonite: blobs are not supported`));
+        return Promise.reject(new Error('carbonite: blobs are not supported'));
     }
 
     if (mime !== 'image/svg+xml' && !nonSvgSupported) {
-        return Promise.reject(new Error(`carbonite: only 'image/svg+xml' mime is supported`));
+        return Promise.reject(new Error("carbonite: only 'image/svg+xml' mime is supported"));
+    }
+
+    if (!options.size.width || !options.size.height) {
+        return Promise.reject(new Error('carbonite: both width and height must be non-zero'));
     }
 
     if (!document.body.contains(node)) {
-        return Promise.reject(new Error(`carbonite: node must be in document`));
+        return Promise.reject(new Error('carbonite: node must be in document'));
     }
 
     const stylesheet = new StyleSheet();
