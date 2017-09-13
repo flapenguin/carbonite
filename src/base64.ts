@@ -1,4 +1,7 @@
-export function encode(str: string) {
+/**
+ * Encodes string as base64.
+ */
+export function encode(str: string): string {
     // Since DOMStrings are 16-bit-encoded strings, in most browsers
     // calling window.btoa on a Unicode string will cause
     // a Character Out Of Range exception if a character exceeds

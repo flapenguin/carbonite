@@ -1,10 +1,10 @@
-import { ICsp } from './csp';
+import { Csp } from './csp';
 import {
     fromCanvas,
     fromString,
     getResourceTypeForForeignObjectSvg,
-    IResource,
-    Type,
+    Resource,
+    ResourceType,
     defaultType
 } from './Resource';
 import { inlineStyles } from './inlineStyles';
@@ -14,13 +14,23 @@ import { htmlToSvg } from './htmlToSvg';
 import { isSupported, isNonSvgSupported, areBlobsSupported } from './support';
 
 export interface IRenderOptions {
-    type?: Type;
+    /** Desired type of rendered image. */
+    type?: ResourceType;
+
+    /** Desired mime type of rendered image. */
     mime?: string;
+
+    /** Size of element. */
     size?: { width: number; height: number; };
-    csp?: ICsp;
+
+    /** Content Security Policy options. */
+    csp?: Csp;
 }
 
-export function render(node: HTMLElement, options?: IRenderOptions): Promise<IResource> {
+/**
+ * Renders element from document into image.
+ */
+export function render(node: HTMLElement, options?: IRenderOptions): Promise<Resource> {
     options = options || {};
 
     const csp = options.csp || { enabled: false };
@@ -56,13 +66,13 @@ export function render(node: HTMLElement, options?: IRenderOptions): Promise<IRe
     return inlineStyles(node, stylesheet)
         .then((inlined) => {
             const svg = htmlToSvg(<HTMLElement> inlined, stylesheet, size, csp);
-            return mime === 'image/svg+xml'
-                ? fromString(svg, mime, type)
-                : rasterizeSvg(svg, { mime, type, size: size, csp });
+            return mime === 'image/svg+xml' ?
+                fromString(svg, mime, type) :
+                rasterizeSvg(svg, { mime, type, size: size, csp });
         });
 }
 
-function rasterizeSvg(svg: string, options: IRenderOptions): Promise<IResource> {
+function rasterizeSvg(svg: string, options: IRenderOptions): Promise<Resource> {
     const svgResource = fromString(svg, 'image/svg+xml', getResourceTypeForForeignObjectSvg(options.csp!));
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;

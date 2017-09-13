@@ -1,20 +1,36 @@
-import { ICsp } from './csp';
+import { Csp } from './csp';
 import { URL, areBlobsSupported } from './support';
 import * as base64 from './base64';
 import * as browser from './browser';
 
 export const defaultType = 'blob';
-export type Type = 'data-url' | 'blob';
 
-export interface IResource {
-    readonly type: Type;
+/**
+ * Type of the resource.
+ */
+export type ResourceType = 'data-url' | 'blob';
+
+/**
+ * Resource with url that can be destroyed.
+ */
+export interface Resource {
+    /** Type of the resource. */
+    readonly type: ResourceType;
+
+    /** Mime type of the resource. */
     readonly mime: string;
+
+    /** Url of the resource. */
     readonly url: string;
 
+    /** Destroys resource. */
     destroy(): void;
 }
 
-export function fromDataUrl(url: string): IResource {
+/**
+ * Create resource from data url.
+ */
+export function fromDataUrl(url: string): Resource {
     return {
         type: 'data-url',
         mime: (url.match(/^data:(.*?);/) || ['', ''])[1],
@@ -23,7 +39,10 @@ export function fromDataUrl(url: string): IResource {
     };
 }
 
-export function fromBlob(blob: Blob): IResource {
+/**
+ * Create resource from Blob.
+ */
+export function fromBlob(blob: Blob): Resource {
     const url = URL.createObjectURL(blob);
     return {
         type: 'blob',
@@ -35,7 +54,10 @@ export function fromBlob(blob: Blob): IResource {
     };
 }
 
-export function fromString(str: string, mime: string, type?: Type): IResource {
+/**
+ * Create resource from string with specified mime type.
+ */
+export function fromString(str: string, mime: string, type?: ResourceType): Resource {
     type = type || defaultType;
 
     if (type === 'blob') {
@@ -51,7 +73,10 @@ export function fromString(str: string, mime: string, type?: Type): IResource {
     throw new Error(`carbonite: bad resource type, expected 'blob' or 'data-uri', got ${type}`);
 }
 
-export function fromCanvas(canvas: HTMLCanvasElement, mime: string, type?: Type): Promise<IResource> {
+/**
+ * Create resource from canvas with specified mime type.
+ */
+export function fromCanvas(canvas: HTMLCanvasElement, mime: string, type?: ResourceType): Promise<Resource> {
     type = type || defaultType;
     try {
         if (type === 'data-url') {
@@ -76,7 +101,10 @@ export function fromCanvas(canvas: HTMLCanvasElement, mime: string, type?: Type)
     return Promise.reject(null);
 }
 
-export function getResourceTypeForForeignObjectSvg(csp: ICsp): Type {
+/**
+ * Get resource type for rendering svg on canvas.
+ */
+export function getResourceTypeForForeignObjectSvg(csp: Csp): ResourceType {
     // We require data: in image-src, but not blob:.
     if (csp.enabled && !csp.imageBlob) {
         return 'data-url';

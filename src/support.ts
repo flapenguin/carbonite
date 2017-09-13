@@ -1,12 +1,12 @@
 import * as browser from './browser';
-import { ICsp } from './csp';
+import { Csp } from './csp';
 
 export const URL = window.URL
     || (window as any).webkitURL
     || (window as any).mozURL
     || window;
 
-export const isSupported = (csp: ICsp) =>
+export const isSupported = (csp: Csp) =>
     // IE doesn't support foreignObject.
     !browser.isIE
     // TODO: test on mobile browsers.
@@ -19,7 +19,7 @@ export const isSupported = (csp: ICsp) =>
     && !(browser.isFirefox && csp.enabled && !csp.styleNonce)
     && typeof XMLSerializer !== 'undefined';
 
-export const isNonSvgSupported = (csp: ICsp) =>
+export const isNonSvgSupported = (csp: Csp) =>
     isSupported(csp)
     // Safari and old versions of Opera have trouble rendering foreignObject.
     && !browser.isSafari
@@ -28,7 +28,7 @@ export const isNonSvgSupported = (csp: ICsp) =>
     // https://developer.microsoft.com/en-us/microsoft-edge/platform/issues/4411619/
     && !browser.isEdge;
 
-export const areBlobsSupported = (csp: ICsp) =>
+export const areBlobsSupported = (csp: Csp) =>
     typeof Blob !== 'undefined'
     && URL.createObjectURL
     // Safari doesn't want to load SVG blobs with foreignObject inside.

@@ -25,20 +25,58 @@ Carbonite is using UMD pattern, so you can use it with require.js or SystemJS, o
 ## Documentation
 
 ```typescript
-function render(node: HTMLElement, options?: IRenderOptions): Promise<IResource>;
+/**
+ * Renders element from document into image.
+ */
+function render(node: HTMLElement, options?: RenderOptions): Promise<Resource>;
 
 interface IRenderOptions {
-    type?: Type;
+    /** Desired type of rendered image. */
+    type?: ResourceType;
+
+    /** Desired mime type of rendered image. */
     mime?: string;
+
+    /** Size of element. */
     size?: { width: number; height: number; };
-    csp?: ICsp;
+
+    /** Content Security Policy options. */
+    csp?: Csp;
 }
 
-interface IResource {
-    readonly type: 'data-url' | 'blob';
+/**
+ * Type of the resource.
+ */
+type ResourceType = 'data-url' | 'blob';
+
+/**
+ * Resource with url that can be destroyed.
+ */
+interface Resource {
+    /** Type of the resource. */
+    readonly type: Type;
+
+    /** Mime type of the resource. */
     readonly mime: string;
+
+    /** Url of the resource. */
     readonly url: string;
 
+    /** Destroys resource. */
     destroy(): void;
+}
+
+/**
+ * Holds information about Content Security Policy on page.
+ */
+interface Csp {
+    /** Whether CSP is enabled. */
+    enabled: boolean;
+
+    /** Nonce value for styles from 'style-src'. */
+    styleNonce?: string | null;
+
+    /** Whether blob: images are allowed (i.e. 'img-src' has 'blob:'). */
+    imageBlob?: boolean;
 }
 ```

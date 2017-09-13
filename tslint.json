@@ -13,7 +13,8 @@
         "import-spacing": true,
         "no-angle-bracket-type-assertion": false,
         "variable-name": [true, "allow-leading-underscore"],
-        "member-access": [true, "no-public"]
+        "member-access": [true, "no-public"],
+        "interface-name": false
     },
     "rulesDirectory": []
 }

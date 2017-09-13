@@ -1,5 +1,5 @@
 import { StyleSheet } from './StyleSheet';
-import { cssomKeyToCssKey } from './cssomKeyToCssKey';
+import { cssOmKeyToCssKey } from './cssomKeyToCssKey';
 import * as browser from './browser';
 import * as temporaryDom from './temporaryDom';
 import { withLoadedImage } from './withLoadedImage';
@@ -19,6 +19,9 @@ const partialStyles = browser.engine !== 'webkit'
     ? /^(?=a)b/ // Dummy regex that fails on any string.
     : /^(background|outline|border|webkitBorder(Before|After|End|Start))[A-Z]/;
 
+/**
+ * Clone node hierarchy and inline all styles.
+ */
 export function inlineStyles(node: Node, stylesheet: StyleSheet): Promise<Node | null> {
     if (!node) {
         throw new Error(`inlineStyles: node must be not null`);
@@ -88,7 +91,7 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
             continue;
         }
 
-        styles.push(cssomKeyToCssKey(key) + ':' + value + ';');
+        styles.push(cssOmKeyToCssKey(key) + ':' + value + ';');
     }
 
     // Try to save data from canvas.

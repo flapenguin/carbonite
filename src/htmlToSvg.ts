@@ -1,11 +1,14 @@
-import { ICsp } from './csp';
+import { Csp } from './csp';
 import { StyleSheet } from './StyleSheet';
 
+/**
+ * Wraps html into svg image.
+ */
 export function htmlToSvg(
     node: HTMLElement,
     stylesheet: StyleSheet,
     size: { width: number; height: number; },
-    csp: ICsp
+    csp: Csp
 ): string {
     const html = new XMLSerializer().serializeToString(node);
     const rootStyle = stylesheet.createClass({

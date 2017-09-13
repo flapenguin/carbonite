@@ -1,4 +1,7 @@
-export function cssomKeyToCssKey(cssomKey: string): string {
+/**
+ * Converts CSS Object Model key to CSS key.
+ */
+export function cssOmKeyToCssKey(cssomKey: string): string {
     if (cssomKey === 'cssFloat') {
         return 'float';
     }

@@ -1,20 +1,26 @@
-import { cssomKeyToCssKey } from './cssomKeyToCssKey';
+import { cssOmKeyToCssKey } from './cssomKeyToCssKey';
 
 function joinRules(rules: {[key: string]: string}): string {
     const parts = [];
 
     // tslint:disable-next-line:forin
     for (const key in rules) {
-        parts.push(`${cssomKeyToCssKey(key)}: ${rules[key]};`);
+        parts.push(`${cssOmKeyToCssKey(key)}: ${rules[key]};`);
     }
 
     return parts.join('');
 }
 
+/**
+ * Append-only CSS style sheet.
+ */
 export class StyleSheet {
     private _styles: string[] = [];
     private _counter: number = 0;
 
+    /**
+     * Creates class with passed rules and returns its name.
+     */
     createClass(rules: {[key: string]: string} | string): string {
         const className = 'x' + this._counter++;
 
@@ -24,6 +30,9 @@ export class StyleSheet {
         return className;
     }
 
+    /**
+     * Combines all created classes into one css string.
+     */
     combine(): string {
         return this._styles.join('');
     }

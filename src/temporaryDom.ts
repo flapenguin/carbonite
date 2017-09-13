@@ -3,7 +3,10 @@ const parent = () => document.body;
 let container: HTMLElement|null = null;
 let refCount = 0;
 
-export function append(node: HTMLElement) {
+/**
+ * Temporarily appends node to DOM.
+ */
+export function append(node: HTMLElement): { dispose(): void; } {
     refCount++;
     if (!container) {
         container = document.createElement('div');

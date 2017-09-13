@@ -1,5 +1,8 @@
 import * as temporaryDom from './temporaryDom';
 
+/**
+ * Loads image into DOM, applies callback to it, then frees image.
+ */
 export function withLoadedImage<T>(url: string, callback: (img: HTMLImageElement) => T): Promise<T> {
     const img = new Image();
     const tempDom = temporaryDom.append(img);
