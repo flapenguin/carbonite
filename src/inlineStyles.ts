@@ -2,6 +2,7 @@ import { StyleSheet } from './StyleSheet';
 import { cssomKeyToCssKey } from './cssomKeyToCssKey';
 import * as browser from './browser';
 import * as temporaryDom from './temporaryDom';
+import { withLoadedImage } from './withLoadedImage';
 
 // Css rules that cannot be cut off.
 // transform-origin is buggy in Chromiums.
@@ -18,33 +19,29 @@ const partialStyles = browser.engine !== 'webkit'
     ? /^(?=a)b/ // Dummy regex that fails on any string.
     : /^(background|outline|border|webkitBorder(Before|After|End|Start))[A-Z]/;
 
-export function inlineStyles(node: Node, stylesheet: StyleSheet): Node | null {
+export function inlineStyles(node: Node, stylesheet: StyleSheet): Promise<Node | null> {
     if (!node) {
         throw new Error(`inlineStyles: node must be not null`);
     }
 
     if (node.nodeType === Node.TEXT_NODE) {
-        return document.createTextNode(node.textContent || '');
+        return Promise.resolve(document.createTextNode(node.textContent || ''));
     }
 
     if (node.nodeType !== Node.ELEMENT_NODE) {
-        return null;
+        return Promise.resolve(null);
     }
 
     return inlineElementStyles(node as HTMLElement, stylesheet);
 }
 
-function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Node {
+function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise<Node> {
     if (node.style.display === 'none') {
-        return document.createComment(`<${node.tagName}> with display: none`);
+        return Promise.resolve(document.createComment(`<${node.tagName}> with display: none`));
     }
 
     const tagName = node.tagName.toLowerCase();
-    if (tagName === 'img') {
-        return document.createComment(`skipped ${node.outerHTML}`);
-    }
-
-    const newTagName = tagName === 'canvas' ? 'div' : 'canvas';
+    const newTagName = /^(canvas|img)$/.test(tagName) ? 'div' : tagName;
     const newNode = document.createElement(newTagName);
     const desiredStyle = getComputedStyle(node);
 
@@ -55,7 +52,7 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Node {
     const defaultStyle = clone(getComputedStyle(newNode));
     tempDom.dispose();
 
-    const styles = [];
+    const styles: string[] = [];
     for (const key in desiredStyle) {
         // Skip JavaScript stuff.
         if (/^(\d+|length|cssText)$|-/.test(key)) {
@@ -100,25 +97,52 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Node {
         }
     }
 
-    // setAttribute('style', ...) triggers CSP warnings everywhere.
-    // Setting CSSOM value directly makes XMLSerializer output them in style attribute.
-    // This works in Chromiums, but Firefox fails to render foreignObject with style attributes.
-    // https://bugzilla.mozilla.org/show_bug.cgi?id=1358106
-    newNode.className = stylesheet.createClass(styles.join(''));
-    newNode.setAttribute('data-carbonite-class', node.getAttribute('class') || '');
+    let done = Promise.resolve();
 
-    // Create inlined versions of child nodes and append them.
-    // tslint:disable-next-line:prefer-for-of
-    for (let i = 0; i < node.childNodes.length; i++) {
-        const child = node.childNodes[i];
-        const newChild = inlineStyles(child, stylesheet);
-
-        if (newChild) {
-            newNode.appendChild(newChild);
-        }
+    // Try to save data from image.
+    if (tagName === 'img') {
+        styles.push(`display: block;`);
+        done = loadImageAsDataUrl(node as HTMLImageElement)
+            .then(dataUrl => {
+                if (dataUrl) {
+                    styles.push(`background-image: url("${dataUrl}");`);
+                }
+            })
+            .catch(e => { /* ignore */ });
     }
 
-    return newNode;
+    return done.then(() => {
+        const className = node.getAttribute('class') || '';
+        if (className) {
+            newNode.setAttribute('data-carbonite-class', className);
+        }
+
+        // setAttribute('style', ...) triggers CSP warnings everywhere.
+        // Setting CSSOM value directly makes XMLSerializer output them in style attribute.
+        // This works in Chromiums, but Firefox fails to render foreignObject with style attributes.
+        // https://bugzilla.mozilla.org/show_bug.cgi?id=1358106
+        newNode.className = stylesheet.createClass(styles.join(''));
+
+        // Create inlined versions of child nodes and append them.
+        const childPromises = [];
+
+        // tslint:disable-next-line:prefer-for-of
+        for (let i = 0; i < node.childNodes.length; i++) {
+            const child = node.childNodes[i];
+            childPromises.push(inlineStyles(child, stylesheet));
+        }
+
+        return Promise.all(childPromises)
+            .then(children => {
+                for (const child of children) {
+                    if (child) {
+                        newNode.appendChild(child);
+                    }
+                }
+
+                return newNode;
+            });
+    });
 }
 
 const hop = ({}).hasOwnProperty;
@@ -136,4 +160,21 @@ function clone(object: { [key: string]: any; }) {
 
 function getComputedStyle(e: HTMLElement) {
     return e.ownerDocument.defaultView.getComputedStyle(e);
+}
+
+function loadImageAsDataUrl(node: HTMLImageElement): Promise<string | null> {
+    const { width, height, src } = node;
+    if (!width || !height || !src) {
+        return Promise.resolve(null);
+    }
+
+    return withLoadedImage(src, img => {
+        // TODO: cache canvases
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        canvas.getContext('2d')!.drawImage(img, 0, 0);
+        return canvas.toDataURL();
+    });
 }

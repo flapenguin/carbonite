@@ -8,17 +8,26 @@
 
     <script src="../dist/carbonite.js"></script>
     <style>
+        .container-wrapper,
         #container {
             display: inline-block;
             box-sizing: border-box;
         }
 
+        .container-wrapper,
         #result {
-            border: 1px solid black;
+            border: 1px solid gray;
         }
 
         .row {
             display: block;
+        }
+
+        #description.success {
+            color: #155724;
+        }
+        #description.failure {
+            color: #721c24;
         }
     </style>
 </head>
@@ -27,23 +36,61 @@
         <textarea id="input" cols="30" rows="10"></textarea>
     </div>
     <div class="row">
+        <select id="type">
+            <option></option>
+            <option>data-url</option>
+            <option>blob</option>
+        </select>
+        <select id="mime">
+            <option></option>
+            <option>image/svg+xml</option>
+            <option>image/png</option>
+            <option>image/jpeg</option>
+            <option>image/webp</option>
+        </select>
         <button id="render" onclick="render()">render</button>
     </div>
 
     <div class="row">
-        <div id="container"></div>
+        <div class="container-wrapper">
+            <div id="container"></div>
+        </div>
     </div>
 
     <div class="row">
         <img id="result">
+        <div id="description"></div>
     </div>
 
     <script>
+        function $(q, n) { return (n || document).querySelector(q); }
+        function $$(q, n) { return (n || document).querySelectorAll(q); }
+
         function render() {
             container.innerHTML = input.value;
-            carbonite.render(container, { size: container.getBoundingClientRect() })
+
+            const imagesLoaded = [].slice.call($$('img', container))
+                .map(function (img) {
+                    return new Promise(function (resolve) { img.onload = img.onerror = resolve; });
+                });
+
+            Promise.all(imagesLoaded)
+                .then(function () {
+                    return carbonite.render(container, {
+                        size: container.getBoundingClientRect(),
+                        mime: mime.selectedOptions[0].textContent || undefined,
+                        type: type.selectedOptions[0].textContent || undefined,
+                    });
+                })
                 .then(function (resource) {
                     result.src = resource.url;
+
+                    description.className = 'success';
+                    description.textContent = resource.type + ' ' + resource.mime;
+                })
+                .catch(function (error) {
+                    description.className = 'failure';
+                    description.textContent = error.message;
                 });
         }
     </script>

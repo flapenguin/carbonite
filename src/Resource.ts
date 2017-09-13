@@ -55,7 +55,7 @@ export function fromCanvas(canvas: HTMLCanvasElement, mime: string, type?: Type)
     type = type || defaultType;
     try {
         if (type === 'data-url') {
-            return Promise.resolve(fromDataUrl(canvas.toDataURL()));
+            return Promise.resolve(fromDataUrl(canvas.toDataURL(mime)));
         }
 
         if (type === 'blob') {
@@ -66,7 +66,7 @@ export function fromCanvas(canvas: HTMLCanvasElement, mime: string, type?: Type)
                     } else {
                         reject(new Error('carbonite: cannot render canvas'));
                     }
-                });
+                }, mime);
             });
         }
     } catch (e) {

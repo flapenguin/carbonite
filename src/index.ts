@@ -43,29 +43,28 @@ export function render(node: HTMLElement, options: IRenderOptions): Promise<IRes
         return Promise.reject(new Error(`carbonite: node must be in document`));
     }
 
-    try {
-        const stylesheet = new StyleSheet();
+    const stylesheet = new StyleSheet();
 
-        const inlined = inlineStyles(node, stylesheet) as HTMLElement;
-        const svg = htmlToSvg(inlined, stylesheet, options.size, csp);
+    return inlineStyles(node, stylesheet)
+        .then(inlined => {
+            const svg = htmlToSvg(inlined as HTMLElement, stylesheet, options.size, csp);
+            return options.mime === 'image/svg+xml'
+                ? fromString(svg, options.mime, options.type)
+                : rasterizeSvg(svg, { mime, type, size: options.size, csp });
+        });
+}
 
-        if (options.mime === 'image/svg+xml') {
-            return Promise.resolve(fromString(svg, options.mime, options.type));
-        }
+function rasterizeSvg(svg: string, options: IRenderOptions): Promise<IResource> {
+    const svgResource = fromString(svg, 'image/svg+xml', getResourceTypeForForeignObjectSvg(options.csp!));
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
 
-        const svgResource = fromString(svg, 'image/svg+xml', getResourceTypeForForeignObjectSvg(csp));
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d')!;
+    canvas.width = options.size.width;
+    canvas.height = options.size.height;
 
-        canvas.width = options.size.width;
-        canvas.height = options.size.height;
-
-        return withLoadedImage(svgResource.url, img => ctx.drawImage(img, 0, 0) as never)
-            .then(() => {
-                svgResource.destroy();
-                return fromCanvas(canvas, mime, type);
-            });
-    } catch (e) {
-        return Promise.reject(e);
-    }
+    return withLoadedImage(svgResource.url, img => ctx.drawImage(img, 0, 0) as never)
+        .then(() => {
+            svgResource.destroy();
+            return fromCanvas(canvas, options.mime!, options.type);
+        });
 }

@@ -125,29 +125,28 @@ function render(node, options) {
     if (!document.body.contains(node)) {
         return Promise.reject(new Error("carbonite: node must be in document"));
     }
-    try {
-        var stylesheet = new StyleSheet_1.StyleSheet();
-        var inlined = inlineStyles_1.inlineStyles(node, stylesheet);
+    var stylesheet = new StyleSheet_1.StyleSheet();
+    return inlineStyles_1.inlineStyles(node, stylesheet)
+        .then(function (inlined) {
         var svg = htmlToSvg_1.htmlToSvg(inlined, stylesheet, options.size, csp);
-        if (options.mime === 'image/svg+xml') {
-            return Promise.resolve(Resource_1.fromString(svg, options.mime, options.type));
-        }
-        var svgResource_1 = Resource_1.fromString(svg, 'image/svg+xml', Resource_1.getResourceTypeForForeignObjectSvg(csp));
-        var canvas_1 = document.createElement('canvas');
-        var ctx_1 = canvas_1.getContext('2d');
-        canvas_1.width = options.size.width;
-        canvas_1.height = options.size.height;
-        return withLoadedImage_1.withLoadedImage(svgResource_1.url, function (img) { return ctx_1.drawImage(img, 0, 0); })
-            .then(function () {
-            svgResource_1.destroy();
-            return Resource_1.fromCanvas(canvas_1, mime, type);
-        });
-    }
-    catch (e) {
-        return Promise.reject(e);
-    }
+        return options.mime === 'image/svg+xml'
+            ? Resource_1.fromString(svg, options.mime, options.type)
+            : rasterizeSvg(svg, { mime: mime, type: type, size: options.size, csp: csp });
+    });
 }
 exports.render = render;
+function rasterizeSvg(svg, options) {
+    var svgResource = Resource_1.fromString(svg, 'image/svg+xml', Resource_1.getResourceTypeForForeignObjectSvg(options.csp));
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d');
+    canvas.width = options.size.width;
+    canvas.height = options.size.height;
+    return withLoadedImage_1.withLoadedImage(svgResource.url, function (img) { return ctx.drawImage(img, 0, 0); })
+        .then(function () {
+        svgResource.destroy();
+        return Resource_1.fromCanvas(canvas, options.mime, options.type);
+    });
+}
 
 
 /***/ }),
@@ -198,7 +197,7 @@ function fromCanvas(canvas, mime, type) {
     type = type || exports.defaultType;
     try {
         if (type === 'data-url') {
-            return Promise.resolve(fromDataUrl(canvas.toDataURL()));
+            return Promise.resolve(fromDataUrl(canvas.toDataURL(mime)));
         }
         if (type === 'blob') {
             return new Promise(function (resolve, reject) {
@@ -209,7 +208,7 @@ function fromCanvas(canvas, mime, type) {
                     else {
                         reject(new Error('carbonite: cannot render canvas'));
                     }
-                });
+                }, mime);
             });
         }
     }
@@ -307,6 +306,7 @@ exports.__esModule = true;
 var cssomKeyToCssKey_1 = __webpack_require__(9);
 var browser = __webpack_require__(0);
 var temporaryDom = __webpack_require__(7);
+var withLoadedImage_1 = __webpack_require__(6);
 // Css rules that cannot be cut off.
 // transform-origin is buggy in Chromiums.
 var forcedStyles = /^transform-origin^/;
@@ -324,23 +324,20 @@ function inlineStyles(node, stylesheet) {
         throw new Error("inlineStyles: node must be not null");
     }
     if (node.nodeType === Node.TEXT_NODE) {
-        return document.createTextNode(node.textContent || '');
+        return Promise.resolve(document.createTextNode(node.textContent || ''));
     }
     if (node.nodeType !== Node.ELEMENT_NODE) {
-        return null;
+        return Promise.resolve(null);
     }
     return inlineElementStyles(node, stylesheet);
 }
 exports.inlineStyles = inlineStyles;
 function inlineElementStyles(node, stylesheet) {
     if (node.style.display === 'none') {
-        return document.createComment("<" + node.tagName + "> with display: none");
+        return Promise.resolve(document.createComment("<" + node.tagName + "> with display: none"));
     }
     var tagName = node.tagName.toLowerCase();
-    if (tagName === 'img') {
-        return document.createComment("skipped " + node.outerHTML);
-    }
-    var newTagName = tagName === 'canvas' ? 'div' : 'canvas';
+    var newTagName = /^(canvas|img)$/.test(tagName) ? 'div' : tagName;
     var newNode = document.createElement(newTagName);
     var desiredStyle = getComputedStyle(node);
     // getComputedStyle requires the node to be in the document.
@@ -385,22 +382,45 @@ function inlineElementStyles(node, stylesheet) {
             // nop
         }
     }
-    // setAttribute('style', ...) triggers CSP warnings everywhere.
-    // Setting CSSOM value directly makes XMLSerializer output them in style attribute.
-    // This works in Chromiums, but Firefox fails to render foreignObject with style attributes.
-    // https://bugzilla.mozilla.org/show_bug.cgi?id=1358106
-    newNode.className = stylesheet.createClass(styles.join(''));
-    newNode.setAttribute('data-carbonite-class', node.getAttribute('class') || '');
-    // Create inlined versions of child nodes and append them.
-    // tslint:disable-next-line:prefer-for-of
-    for (var i = 0; i < node.childNodes.length; i++) {
-        var child = node.childNodes[i];
-        var newChild = inlineStyles(child, stylesheet);
-        if (newChild) {
-            newNode.appendChild(newChild);
-        }
+    var done = Promise.resolve();
+    // Try to save data from image.
+    if (tagName === 'img') {
+        styles.push("display: block;");
+        done = loadImageAsDataUrl(node)
+            .then(function (dataUrl) {
+            if (dataUrl) {
+                styles.push("background-image: url(\"" + dataUrl + "\");");
+            }
+        })["catch"](function (e) { });
     }
-    return newNode;
+    return done.then(function () {
+        var className = node.getAttribute('class') || '';
+        if (className) {
+            newNode.setAttribute('data-carbonite-class', className);
+        }
+        // setAttribute('style', ...) triggers CSP warnings everywhere.
+        // Setting CSSOM value directly makes XMLSerializer output them in style attribute.
+        // This works in Chromiums, but Firefox fails to render foreignObject with style attributes.
+        // https://bugzilla.mozilla.org/show_bug.cgi?id=1358106
+        newNode.className = stylesheet.createClass(styles.join(''));
+        // Create inlined versions of child nodes and append them.
+        var childPromises = [];
+        // tslint:disable-next-line:prefer-for-of
+        for (var i = 0; i < node.childNodes.length; i++) {
+            var child = node.childNodes[i];
+            childPromises.push(inlineStyles(child, stylesheet));
+        }
+        return Promise.all(childPromises)
+            .then(function (children) {
+            for (var _i = 0, children_1 = children; _i < children_1.length; _i++) {
+                var child = children_1[_i];
+                if (child) {
+                    newNode.appendChild(child);
+                }
+            }
+            return newNode;
+        });
+    });
 }
 var hop = ({}).hasOwnProperty;
 function clone(object) {
@@ -414,6 +434,20 @@ function clone(object) {
 }
 function getComputedStyle(e) {
     return e.ownerDocument.defaultView.getComputedStyle(e);
+}
+function loadImageAsDataUrl(node) {
+    var width = node.width, height = node.height, src = node.src;
+    if (!width || !height || !src) {
+        return Promise.resolve(null);
+    }
+    return withLoadedImage_1.withLoadedImage(src, function (img) {
+        // TODO: cache canvases
+        var canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        return canvas.toDataURL();
+    });
 }
 
 
@@ -438,7 +472,10 @@ function withLoadedImage(url, callback) {
     });
     return loaded
         .then(function () { return callback(img); })
-        .then(function () { tempDom.dispose(); }, function (error) {
+        .then(function (value) {
+        tempDom.dispose();
+        return value;
+    }, function (error) {
         tempDom.dispose();
         return Promise.reject(error);
     });

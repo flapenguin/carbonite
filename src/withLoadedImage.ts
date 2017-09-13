@@ -1,6 +1,6 @@
 import * as temporaryDom from './temporaryDom';
 
-export function withLoadedImage(url: string, callback: (img: HTMLImageElement) => never): Promise<void> {
+export function withLoadedImage<T = void>(url: string, callback: (img: HTMLImageElement) => T): Promise<T> {
     const img = new Image();
     const tempDom = temporaryDom.append(img);
 
@@ -17,7 +17,10 @@ export function withLoadedImage(url: string, callback: (img: HTMLImageElement) =
     return loaded
         .then(() => callback(img))
         .then(
-            () => { tempDom.dispose(); },
+            value => {
+                tempDom.dispose();
+                return value;
+            },
             error => {
                 tempDom.dispose();
                 return Promise.reject(error);
