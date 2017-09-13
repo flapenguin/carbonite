@@ -86,7 +86,6 @@
             Promise.all(imagesLoaded)
                 .then(function () {
                     return carbonite.render(container, {
-                        size: container.getBoundingClientRect(),
                         mime: mime.selectedOptions[0].textContent || undefined,
                         type: type.selectedOptions[0].textContent || undefined,
                     });

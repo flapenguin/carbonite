@@ -16,13 +16,17 @@ import { isSupported, isNonSvgSupported, areBlobsSupported } from './support';
 export interface IRenderOptions {
     type?: Type;
     mime?: string;
-    size: { width: number; height: number; };
+    size?: { width: number; height: number; };
     csp?: ICsp;
 }
 
-export function render(node: HTMLElement, options: IRenderOptions): Promise<IResource> {
+export function render(node: HTMLElement, options?: IRenderOptions): Promise<IResource> {
+    options = options || {};
+
     const csp = options.csp || { enabled: false };
     const nonSvgSupported = isNonSvgSupported(csp);
+
+    const size = options.size || node.getBoundingClientRect();
 
     const type = options.type || defaultType;
     const mime = options.mime || (nonSvgSupported ? 'image/png' : 'image/svg+xml');
@@ -39,7 +43,7 @@ export function render(node: HTMLElement, options: IRenderOptions): Promise<IRes
         return Promise.reject(new Error("carbonite: only 'image/svg+xml' mime is supported"));
     }
 
-    if (!options.size.width || !options.size.height) {
+    if (!size || !size.width || !size.height) {
         return Promise.reject(new Error('carbonite: both width and height must be non-zero'));
     }
 
@@ -51,10 +55,10 @@ export function render(node: HTMLElement, options: IRenderOptions): Promise<IRes
 
     return inlineStyles(node, stylesheet)
         .then(inlined => {
-            const svg = htmlToSvg(inlined as HTMLElement, stylesheet, options.size, csp);
-            return options.mime === 'image/svg+xml'
-                ? fromString(svg, options.mime, options.type)
-                : rasterizeSvg(svg, { mime, type, size: options.size, csp });
+            const svg = htmlToSvg(inlined as HTMLElement, stylesheet, size, csp);
+            return mime === 'image/svg+xml'
+                ? fromString(svg, mime, type)
+                : rasterizeSvg(svg, { mime, type, size: size, csp });
         });
 }
 
@@ -63,12 +67,12 @@ function rasterizeSvg(svg: string, options: IRenderOptions): Promise<IResource> 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
 
-    canvas.width = options.size.width;
-    canvas.height = options.size.height;
+    canvas.width = options.size!.width;
+    canvas.height = options.size!.height;
 
     return withLoadedImage(svgResource.url, img => ctx.drawImage(img, 0, 0) as never)
         .then(() => {
             svgResource.destroy();
-            return fromCanvas(canvas, options.mime!, options.type);
+            return fromCanvas(canvas, options.mime!, options.type!);
         });
 }

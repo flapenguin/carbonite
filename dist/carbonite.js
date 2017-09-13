@@ -251,8 +251,10 @@ var StyleSheet_1 = __webpack_require__(9);
 var htmlToSvg_1 = __webpack_require__(10);
 var support_1 = __webpack_require__(1);
 function render(node, options) {
+    options = options || {};
     var csp = options.csp || { enabled: false };
     var nonSvgSupported = support_1.isNonSvgSupported(csp);
+    var size = options.size || node.getBoundingClientRect();
     var type = options.type || Resource_1.defaultType;
     var mime = options.mime || (nonSvgSupported ? 'image/png' : 'image/svg+xml');
     if (!support_1.isSupported(csp)) {
@@ -264,7 +266,7 @@ function render(node, options) {
     if (mime !== 'image/svg+xml' && !nonSvgSupported) {
         return Promise.reject(new Error("carbonite: only 'image/svg+xml' mime is supported"));
     }
-    if (!options.size.width || !options.size.height) {
+    if (!size || !size.width || !size.height) {
         return Promise.reject(new Error('carbonite: both width and height must be non-zero'));
     }
     if (!document.body.contains(node)) {
@@ -273,10 +275,10 @@ function render(node, options) {
     var stylesheet = new StyleSheet_1.StyleSheet();
     return inlineStyles_1.inlineStyles(node, stylesheet)
         .then(function (inlined) {
-        var svg = htmlToSvg_1.htmlToSvg(inlined, stylesheet, options.size, csp);
-        return options.mime === 'image/svg+xml'
-            ? Resource_1.fromString(svg, options.mime, options.type)
-            : rasterizeSvg(svg, { mime: mime, type: type, size: options.size, csp: csp });
+        var svg = htmlToSvg_1.htmlToSvg(inlined, stylesheet, size, csp);
+        return mime === 'image/svg+xml'
+            ? Resource_1.fromString(svg, mime, type)
+            : rasterizeSvg(svg, { mime: mime, type: type, size: size, csp: csp });
     });
 }
 exports.render = render;
