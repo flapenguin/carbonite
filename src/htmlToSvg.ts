@@ -8,19 +8,25 @@ export function htmlToSvg(
     csp: ICsp
 ): string {
     const html = new XMLSerializer().serializeToString(node);
-    const rootStyle = stylesheet.createClass('position: relative;');
+    const rootStyle = stylesheet.createClass({
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        margin: '0',
+        padding: '0',
+        overflow: 'hidden'
+    });
+
     return `
         <svg xmlns="http://www.w3.org/2000/svg" width="${size.width}" height="${size.height}">
-        <foreignObject width="100%" height="100%">
-            <div xmlns="http://www.w3.org/1999/xhtml">
-                <style ${csp.enabled ? `nonce="${csp.styleNonce}"` : ''}>
-                    ${stylesheet.combine()}
-                </style>
-                <div class="${rootStyle}">
+            <style ${csp.enabled ? `nonce="${csp.styleNonce}"` : ''}>
+                ${stylesheet.combine()}
+            </style>
+            <foreignObject width="100%" height="100%">
+                <body xmlns="http://www.w3.org/1999/xhtml" class="${rootStyle}">
                     ${html}
-                </div>
-            </div>
-        </foreignObject>
+                </body>
+            </foreignObject>
         </svg>
     `;
 }

@@ -114,16 +114,19 @@ function render(node, options) {
     var type = options.type || Resource_1.defaultType;
     var mime = options.mime || (nonSvgSupported ? 'image/png' : 'image/svg+xml');
     if (!support_1.isSupported(csp)) {
-        return Promise.reject(new Error("carbonite: render is not supported"));
+        return Promise.reject(new Error('carbonite: render is not supported'));
     }
     if (type === 'blob' && !support_1.areBlobsSupported(csp)) {
-        return Promise.reject(new Error("carbonite: blobs are not supported"));
+        return Promise.reject(new Error('carbonite: blobs are not supported'));
     }
     if (mime !== 'image/svg+xml' && !nonSvgSupported) {
         return Promise.reject(new Error("carbonite: only 'image/svg+xml' mime is supported"));
     }
+    if (!options.size.width || !options.size.height) {
+        return Promise.reject(new Error('carbonite: both width and height must be non-zero'));
+    }
     if (!document.body.contains(node)) {
-        return Promise.reject(new Error("carbonite: node must be in document"));
+        return Promise.reject(new Error('carbonite: node must be in document'));
     }
     var stylesheet = new StyleSheet_1.StyleSheet();
     return inlineStyles_1.inlineStyles(node, stylesheet)
@@ -585,8 +588,15 @@ exports.cssomKeyToCssKey = cssomKeyToCssKey;
 exports.__esModule = true;
 function htmlToSvg(node, stylesheet, size, csp) {
     var html = new XMLSerializer().serializeToString(node);
-    var rootStyle = stylesheet.createClass('position: relative;');
-    return "\n        <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"" + size.width + "\" height=\"" + size.height + "\">\n        <foreignObject width=\"100%\" height=\"100%\">\n            <div xmlns=\"http://www.w3.org/1999/xhtml\">\n                <style " + (csp.enabled ? "nonce=\"" + csp.styleNonce + "\"" : '') + ">\n                    " + stylesheet.combine() + "\n                </style>\n                <div class=\"" + rootStyle + "\">\n                    " + html + "\n                </div>\n            </div>\n        </foreignObject>\n        </svg>\n    ";
+    var rootStyle = stylesheet.createClass({
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        margin: '0',
+        padding: '0',
+        overflow: 'hidden'
+    });
+    return "\n        <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"" + size.width + "\" height=\"" + size.height + "\">\n            <style " + (csp.enabled ? "nonce=\"" + csp.styleNonce + "\"" : '') + ">\n                " + stylesheet.combine() + "\n            </style>\n            <foreignObject width=\"100%\" height=\"100%\">\n                <body xmlns=\"http://www.w3.org/1999/xhtml\" class=\"" + rootStyle + "\">\n                    " + html + "\n                </body>\n            </foreignObject>\n        </svg>\n    ";
 }
 exports.htmlToSvg = htmlToSvg;
 

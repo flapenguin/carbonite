@@ -12,6 +12,12 @@
         #container {
             display: inline-block;
             box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #container {
+            vertical-align: bottom;
         }
 
         .container-wrapper,
@@ -23,6 +29,9 @@
             display: block;
         }
 
+        #description {
+            font-size: 70%;
+        }
         #description.success {
             color: #155724;
         }
@@ -58,8 +67,8 @@
     </div>
 
     <div class="row">
+        <h2>result <span id="description"></span></h2>
         <img id="result">
-        <div id="description"></div>
     </div>
 
     <script>
@@ -89,6 +98,8 @@
                     description.textContent = resource.type + ' ' + resource.mime;
                 })
                 .catch(function (error) {
+                    result.src = '';
+
                     description.className = 'failure';
                     description.textContent = error.message;
                 });
