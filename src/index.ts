@@ -54,8 +54,8 @@ export function render(node: HTMLElement, options?: IRenderOptions): Promise<IRe
     const stylesheet = new StyleSheet();
 
     return inlineStyles(node, stylesheet)
-        .then(inlined => {
-            const svg = htmlToSvg(inlined as HTMLElement, stylesheet, size, csp);
+        .then((inlined) => {
+            const svg = htmlToSvg(<HTMLElement> inlined, stylesheet, size, csp);
             return mime === 'image/svg+xml'
                 ? fromString(svg, mime, type)
                 : rasterizeSvg(svg, { mime, type, size: size, csp });
@@ -70,7 +70,7 @@ function rasterizeSvg(svg: string, options: IRenderOptions): Promise<IResource> 
     canvas.width = options.size!.width;
     canvas.height = options.size!.height;
 
-    return withLoadedImage(svgResource.url, img => ctx.drawImage(img, 0, 0) as never)
+    return withLoadedImage(svgResource.url, (img) => ctx.drawImage(img, 0, 0))
         .then(() => {
             svgResource.destroy();
             return fromCanvas(canvas, options.mime!, options.type!);

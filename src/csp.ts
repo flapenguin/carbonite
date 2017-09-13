@@ -1,5 +1,5 @@
 export interface ICsp {
     enabled: boolean;
-    styleNonce?: string|null;
+    styleNonce?: string | null;
     imageBlob?: boolean;
 }

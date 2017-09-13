@@ -12,19 +12,19 @@ function joinRules(rules: {[key: string]: string}): string {
 }
 
 export class StyleSheet {
-    private styles: string[] = [];
-    private counter: number = 0;
+    private _styles: string[] = [];
+    private _counter: number = 0;
 
-    public createClass(rules: {[key: string]: string} | string): string {
-        const className = 'x' + this.counter++;
+    createClass(rules: {[key: string]: string} | string): string {
+        const className = 'x' + this._counter++;
 
         const style = typeof rules === 'string' ? rules : joinRules(rules);
-        this.styles.push(`.${className} { ${style} }`);
+        this._styles.push(`.${className} { ${style} }`);
 
         return className;
     }
 
-    public combine(): string {
-        return this.styles.join('');
+    combine(): string {
+        return this._styles.join('');
     }
 }

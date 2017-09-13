@@ -60,7 +60,7 @@ export function fromCanvas(canvas: HTMLCanvasElement, mime: string, type?: Type)
 
         if (type === 'blob') {
             return new Promise((resolve, reject) => {
-                canvas.toBlob(blob => {
+                canvas.toBlob((blob) => {
                     if (blob) {
                         resolve(fromBlob(blob));
                     } else {

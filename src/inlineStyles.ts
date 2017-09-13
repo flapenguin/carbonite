@@ -54,6 +54,10 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
 
     const styles: string[] = [];
     for (const key in desiredStyle) {
+        if (!desiredStyle.hasOwnProperty(key)) {
+            continue;
+        }
+
         // Skip JavaScript stuff.
         if (/^(\d+|length|cssText)$|-/.test(key)) {
             continue;
@@ -101,14 +105,14 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
 
     // Try to save data from image.
     if (tagName === 'img') {
-        styles.push(`display: block;`);
+        styles.push('display: block;');
         done = loadImageAsDataUrl(node as HTMLImageElement)
-            .then(dataUrl => {
+            .then((dataUrl) => {
                 if (dataUrl) {
                     styles.push(`background-image: url("${dataUrl}");`);
                 }
             })
-            .catch(e => { /* ignore */ });
+            .catch((e) => { /* ignore */ });
     }
 
     return done.then(() => {
@@ -133,7 +137,7 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
         }
 
         return Promise.all(childPromises)
-            .then(children => {
+            .then((children) => {
                 for (const child of children) {
                     if (child) {
                         newNode.appendChild(child);
@@ -168,7 +172,7 @@ function loadImageAsDataUrl(node: HTMLImageElement): Promise<string | null> {
         return Promise.resolve(null);
     }
 
-    return withLoadedImage(src, img => {
+    return withLoadedImage(src, (img) => {
         // TODO: cache canvases
         const canvas = document.createElement('canvas');
         canvas.width = width;
