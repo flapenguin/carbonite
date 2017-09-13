@@ -1,4 +1,4 @@
-import { Csp } from './csp';
+import {Csp} from './csp';
 import {
     fromCanvas,
     fromString,
@@ -7,11 +7,11 @@ import {
     ResourceType,
     defaultType
 } from './Resource';
-import { inlineStyles } from './inlineStyles';
-import { withLoadedImage } from './withLoadedImage';
-import { StyleSheet } from './StyleSheet';
-import { htmlToSvg } from './htmlToSvg';
-import { isSupported, isNonSvgSupported, areBlobsSupported } from './support';
+import {inlineStyles} from './inlineStyles';
+import {withLoadedImage} from './withLoadedImage';
+import {StyleSheet} from './StyleSheet';
+import {htmlToSvg} from './htmlToSvg';
+import {isSupported, isNonSvgSupported, areBlobsSupported} from './support';
 
 export interface IRenderOptions {
     /** Desired type of rendered image. */

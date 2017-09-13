@@ -1,5 +1,5 @@
-import { Csp } from './csp';
-import { StyleSheet } from './StyleSheet';
+import {Csp} from './csp';
+import {StyleSheet} from './StyleSheet';
 
 /**
  * Wraps html into svg image.

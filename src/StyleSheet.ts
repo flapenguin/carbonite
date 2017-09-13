@@ -1,4 +1,4 @@
-import { cssOmKeyToCssKey } from './cssomKeyToCssKey';
+import {cssOmKeyToCssKey} from './cssomKeyToCssKey';
 
 function joinRules(rules: {[key: string]: string}): string {
     const parts = [];

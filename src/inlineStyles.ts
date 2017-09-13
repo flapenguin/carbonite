@@ -1,8 +1,8 @@
-import { StyleSheet } from './StyleSheet';
-import { cssOmKeyToCssKey } from './cssomKeyToCssKey';
+import {StyleSheet} from './StyleSheet';
+import {cssOmKeyToCssKey} from './cssomKeyToCssKey';
 import * as browser from './browser';
 import * as temporaryDom from './temporaryDom';
-import { withLoadedImage } from './withLoadedImage';
+import {withLoadedImage} from './withLoadedImage';
 
 // Css rules that cannot be cut off.
 // transform-origin is buggy in Chromiums.

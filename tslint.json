@@ -10,7 +10,6 @@
         "object-literal-sort-keys": false,
         "object-literal-shorthand": false,
         "trailing-comma": false,
-        "import-spacing": true,
         "no-angle-bracket-type-assertion": false,
         "variable-name": [true, "allow-leading-underscore"],
         "member-access": [true, "no-public"],

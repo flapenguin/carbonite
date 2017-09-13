@@ -1,5 +1,5 @@
-import { Csp } from './csp';
-import { URL, areBlobsSupported } from './support';
+import {Csp} from './csp';
+import {URL, areBlobsSupported} from './support';
 import * as base64 from './base64';
 import * as browser from './browser';
 

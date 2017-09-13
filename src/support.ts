@@ -1,5 +1,5 @@
 import * as browser from './browser';
-import { Csp } from './csp';
+import {Csp} from './csp';
 
 export const URL = window.URL
     || (window as any).webkitURL

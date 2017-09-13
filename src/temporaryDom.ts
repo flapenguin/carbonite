@@ -1,5 +1,3 @@
-const parent = () => document.body;
-
 let container: HTMLElement|null = null;
 let refCount = 0;
 
@@ -13,7 +11,7 @@ export function append(node: HTMLElement): { dispose(): void; } {
         container.style.position = 'absolute';
         container.style.left = '-99999px';
         container.style.top = '-99999px';
-        parent().appendChild(container);
+        document.body.appendChild(container);
     }
 
     container.appendChild(node);
