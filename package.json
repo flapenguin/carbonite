@@ -4,7 +4,7 @@
     "description": "",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "build": "webpack",
+        "build": "webpack && webpack --optimize-minimize --output-filename 'carbonite.min.js'",
         "build:watch": "webpack --watch",
         "lint": "tslint -p ."
     },
