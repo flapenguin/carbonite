@@ -72,13 +72,10 @@
     </div>
 
     <script>
-        function $(q, n) { return (n || document).querySelector(q); }
-        function $$(q, n) { return (n || document).querySelectorAll(q); }
-
         function render() {
             container.innerHTML = input.value;
 
-            const imagesLoaded = [].slice.call($$('img', container))
+            const imagesLoaded = [].slice.call(container.querySelectorAll('img'))
                 .map(function (img) {
                     return new Promise(function (resolve) { img.onload = img.onerror = resolve; });
                 });

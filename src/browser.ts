@@ -16,9 +16,9 @@ export const isIE = /MSIE/.test(ua);
 
 export const isEdge = /Edge/.test(ua);
 
-export const isOldOpera = /Opera[/ ]/.test(ua)
-    && !isChromium
-    && extractVersion(/(?:Version|Opera[/ ])\/([0-9][0-9\.]*)/) <= 12;
+export const isOldOpera = /Opera[/ ]/.test(ua) &&
+    !isChromium &&
+    extractVersion(/(?:Version|Opera[/ ])\/([0-9][0-9\.]*)/) <= 12;
 
 // In summary, we recommend looking for the string “Mobi”
 // anywhere in the User Agent to detect a mobile device.

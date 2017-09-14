@@ -1,19 +1,20 @@
 import {Csp} from './csp';
 import {
-    fromCanvas,
-    fromString,
+    createResourceFromCanvas,
+    createResourceFromString,
     getResourceTypeForForeignObjectSvg,
     Resource,
     ResourceType,
-    defaultType
+    getDefaultType,
+    isValidResourceType
 } from './Resource';
 import {inlineStyles} from './inlineStyles';
 import {withLoadedImage} from './withLoadedImage';
 import {StyleSheet} from './StyleSheet';
-import {htmlToSvg} from './htmlToSvg';
+import {wrapHtmlInSvg} from './htmlToSvg';
 import {isSupported, isNonSvgSupported, areBlobsSupported} from './support';
 
-export interface IRenderOptions {
+export interface RenderOptions {
     /** Desired type of rendered image. */
     type?: ResourceType;
 
@@ -30,7 +31,7 @@ export interface IRenderOptions {
 /**
  * Renders element from document into image.
  */
-export function render(node: HTMLElement, options?: IRenderOptions): Promise<Resource> {
+export function render(node: HTMLElement, options?: RenderOptions): Promise<Resource> {
     options = options || {};
 
     const csp = options.csp || { enabled: false };
@@ -38,8 +39,12 @@ export function render(node: HTMLElement, options?: IRenderOptions): Promise<Res
 
     const size = options.size || node.getBoundingClientRect();
 
-    const type = options.type || defaultType;
+    const type = options.type || getDefaultType(csp);
     const mime = options.mime || (nonSvgSupported ? 'image/png' : 'image/svg+xml');
+
+    if (!isValidResourceType(type)) {
+        return Promise.reject(new Error("carbonite: only 'blob' and 'data-url' types are supported"));
+    }
 
     if (!isSupported(csp)) {
         return Promise.reject(new Error('carbonite: render is not supported'));
@@ -65,15 +70,16 @@ export function render(node: HTMLElement, options?: IRenderOptions): Promise<Res
 
     return inlineStyles(node, stylesheet)
         .then((inlined) => {
-            const svg = htmlToSvg(<HTMLElement> inlined, stylesheet, size, csp);
+            const svg = wrapHtmlInSvg(<HTMLElement> inlined, stylesheet, size, csp);
             return mime === 'image/svg+xml' ?
-                fromString(svg, mime, type) :
+                createResourceFromString(svg, mime, type) :
                 rasterizeSvg(svg, { mime, type, size: size, csp });
         });
 }
 
-function rasterizeSvg(svg: string, options: IRenderOptions): Promise<Resource> {
-    const svgResource = fromString(svg, 'image/svg+xml', getResourceTypeForForeignObjectSvg(options.csp!));
+function rasterizeSvg(svg: string, options: RenderOptions): Promise<Resource> {
+    const svgType = getResourceTypeForForeignObjectSvg(options.csp!);
+    const svgResource = createResourceFromString(svg, 'image/svg+xml', svgType);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
 
@@ -83,6 +89,6 @@ function rasterizeSvg(svg: string, options: IRenderOptions): Promise<Resource> {
     return withLoadedImage(svgResource.url, (img) => ctx.drawImage(img, 0, 0))
         .then(() => {
             svgResource.destroy();
-            return fromCanvas(canvas, options.mime!, options.type!);
+            return createResourceFromCanvas(canvas, options.mime!, options.type!);
         });
 }

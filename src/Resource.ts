@@ -3,12 +3,14 @@ import {URL, areBlobsSupported} from './support';
 import * as base64 from './base64';
 import * as browser from './browser';
 
-export const defaultType = 'blob';
-
 /**
  * Type of the resource.
  */
 export type ResourceType = 'data-url' | 'blob';
+
+export function getDefaultType(csp: Csp): ResourceType {
+    return areBlobsSupported(csp) ? 'blob' : 'data-url';
+}
 
 /**
  * Resource with url that can be destroyed.
@@ -30,7 +32,7 @@ export interface Resource {
 /**
  * Create resource from data url.
  */
-export function fromDataUrl(url: string): Resource {
+export function createResourceFromDataUrl(url: string): Resource {
     return {
         type: 'data-url',
         mime: (url.match(/^data:(.*?);/) || ['', ''])[1],
@@ -42,8 +44,9 @@ export function fromDataUrl(url: string): Resource {
 /**
  * Create resource from Blob.
  */
-export function fromBlob(blob: Blob): Resource {
+export function createResourceFromBlob(blob: Blob): Resource {
     const url = URL.createObjectURL(blob);
+
     return {
         type: 'blob',
         mime: (blob.type.match(/^([^/]*\/[^;]*)/) || ['', ''])[1],
@@ -57,48 +60,49 @@ export function fromBlob(blob: Blob): Resource {
 /**
  * Create resource from string with specified mime type.
  */
-export function fromString(str: string, mime: string, type?: ResourceType): Resource {
-    type = type || defaultType;
+export function createResourceFromString(str: string, mime: string, type: ResourceType): Resource {
+    switch (type) {
+        case 'blob':
+            return createResourceFromBlob(new Blob([str], { type: `${mime};charset=utf-8` }));
 
-    if (type === 'blob') {
-        return fromBlob(new Blob([str], { type: `${mime};charset=utf-8` }));
+        case 'data-url':
+            const dataUrl = `data:${mime};base64,${base64.encode(str)}`;
+
+            return createResourceFromDataUrl(dataUrl);
     }
-
-    if (type === 'data-url') {
-        const dataUrl = `data:${mime};base64,${base64.encode(str)}`;
-
-        return fromDataUrl(dataUrl);
-    }
-
-    throw new Error(`carbonite: bad resource type, expected 'blob' or 'data-uri', got ${type}`);
 }
 
 /**
  * Create resource from canvas with specified mime type.
  */
-export function fromCanvas(canvas: HTMLCanvasElement, mime: string, type?: ResourceType): Promise<Resource> {
-    type = type || defaultType;
+export function createResourceFromCanvas(
+    canvas: HTMLCanvasElement,
+    mime: string,
+    type: ResourceType
+): Promise<Resource> {
+    // HACK: integrating with old vow Promises in debug mode for easier integration with Maps API
     try {
-        if (type === 'data-url') {
-            return Promise.resolve(fromDataUrl(canvas.toDataURL(mime)));
-        }
+        switch (type) {
+            case 'blob':
+                return new Promise((resolve, reject) => {
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            resolve(createResourceFromBlob(blob));
+                        } else {
+                            reject(new Error('carbonite: cannot render canvas'));
+                        }
+                    }, mime);
+                });
 
-        if (type === 'blob') {
-            return new Promise((resolve, reject) => {
-                canvas.toBlob((blob) => {
-                    if (blob) {
-                        resolve(fromBlob(blob));
-                    } else {
-                        reject(new Error('carbonite: cannot render canvas'));
-                    }
-                }, mime);
-            });
+            case 'data-url':
+                return Promise.resolve(createResourceFromDataUrl(canvas.toDataURL(mime)));
         }
     } catch (e) {
         return Promise.reject(e);
     }
 
-    return Promise.reject(null);
+    // TypeScript's return type analyzer doesn't fully understand construction above.
+    return <never> null;
 }
 
 /**
@@ -117,4 +121,11 @@ export function getResourceTypeForForeignObjectSvg(csp: Csp): ResourceType {
     }
 
     return areBlobsSupported(csp) ? 'blob' : 'data-url';
+}
+
+/**
+ * Checks whether passed string is a valid resource type.
+ */
+export function isValidResourceType(type: string) {
+    return type === 'blob' || type === 'data-url';
 }

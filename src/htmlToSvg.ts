@@ -1,13 +1,18 @@
 import {Csp} from './csp';
 import {StyleSheet} from './StyleSheet';
 
+export interface Size {
+    width: number;
+    height: number;
+}
+
 /**
  * Wraps html into svg image.
  */
-export function htmlToSvg(
+export function wrapHtmlInSvg(
     node: HTMLElement,
     stylesheet: StyleSheet,
-    size: { width: number; height: number; },
+    size: Size,
     csp: Csp
 ): string {
     const html = new XMLSerializer().serializeToString(node);

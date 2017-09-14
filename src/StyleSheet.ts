@@ -1,11 +1,11 @@
-import {cssOmKeyToCssKey} from './cssomKeyToCssKey';
+import {convertCssOmKeyToCssKey} from './cssomKeyToCssKey';
 
-function joinRules(rules: {[key: string]: string}): string {
+function joinRules(rules: Record<string, string>): string {
     const parts = [];
 
     // tslint:disable-next-line:forin
     for (const key in rules) {
-        parts.push(`${cssOmKeyToCssKey(key)}: ${rules[key]};`);
+        parts.push(`${convertCssOmKeyToCssKey(key)}: ${rules[key]};`);
     }
 
     return parts.join('');
@@ -21,7 +21,7 @@ export class StyleSheet {
     /**
      * Creates class with passed rules and returns its name.
      */
-    createClass(rules: {[key: string]: string} | string): string {
+    createClass(rules: Record<string, string> | string): string {
         const className = 'x' + this._counter++;
 
         const style = typeof rules === 'string' ? rules : joinRules(rules);

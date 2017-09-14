@@ -1,5 +1,5 @@
 import {StyleSheet} from './StyleSheet';
-import {cssOmKeyToCssKey} from './cssomKeyToCssKey';
+import {convertCssOmKeyToCssKey} from './cssomKeyToCssKey';
 import * as browser from './browser';
 import * as temporaryDom from './temporaryDom';
 import {withLoadedImage} from './withLoadedImage';
@@ -91,7 +91,7 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
             continue;
         }
 
-        styles.push(cssOmKeyToCssKey(key) + ':' + value + ';');
+        styles.push(convertCssOmKeyToCssKey(key) + ':' + value + ';');
     }
 
     // Try to save data from canvas.
@@ -153,8 +153,8 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
 }
 
 const hop = ({}).hasOwnProperty;
-function clone(object: { [key: string]: any; }) {
-    const result: { [key: string]: any; } = {};
+function clone(object: Record<string, any>) {
+    const result: Record<string, any> = {};
 
     for (const key in object) {
         if (hop.call(object, key)) {
