@@ -1,14 +1,9 @@
 import {convertCssOmKeyToCssKey} from './cssomKeyToCssKey';
 
 function joinRules(rules: Record<string, string>): string {
-    const parts = [];
-
-    // tslint:disable-next-line:forin
-    for (const key in rules) {
-        parts.push(`${convertCssOmKeyToCssKey(key)}: ${rules[key]};`);
-    }
-
-    return parts.join('');
+    return Object.keys(rules)
+        .map((rule) => `${convertCssOmKeyToCssKey(rule)}: ${rules[rule]};`)
+        .join('');
 }
 
 /**

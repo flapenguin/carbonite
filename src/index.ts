@@ -35,19 +35,19 @@ export function render(node: HTMLElement, options?: RenderOptions): Promise<Reso
     options = options || {};
 
     const csp = options.csp || { enabled: false };
+
+    if (!isSupported(csp)) {
+        return Promise.reject(new Error('carbonite: render is not supported'));
+    }
+
     const nonSvgSupported = isNonSvgSupported(csp);
 
     const size = options.size || node.getBoundingClientRect();
-
     const type = options.type || getDefaultType(csp);
     const mime = options.mime || (nonSvgSupported ? 'image/png' : 'image/svg+xml');
 
     if (!isValidResourceType(type)) {
         return Promise.reject(new Error("carbonite: only 'blob' and 'data-url' types are supported"));
-    }
-
-    if (!isSupported(csp)) {
-        return Promise.reject(new Error('carbonite: render is not supported'));
     }
 
     if (type === 'blob' && !areBlobsSupported(csp)) {
@@ -71,9 +71,10 @@ export function render(node: HTMLElement, options?: RenderOptions): Promise<Reso
     return inlineStyles(node, stylesheet)
         .then((inlined) => {
             const svg = wrapHtmlInSvg(<HTMLElement> inlined, stylesheet, size, csp);
+
             return mime === 'image/svg+xml' ?
                 createResourceFromString(svg, mime, type) :
-                rasterizeSvg(svg, { mime, type, size: size, csp });
+                rasterizeSvg(svg, { mime, type, size, csp });
         });
 }
 
