@@ -7,8 +7,99 @@
     <title>Carbonite test stand</title>
 
     <script src="../dist/carbonite.js"></script>
+    <style>
+        .container-wrapper,
+        #container {
+            display: inline-block;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #container {
+            vertical-align: bottom;
+        }
+
+        .container-wrapper,
+        #result {
+            border: 1px solid gray;
+        }
+
+        .row {
+            display: block;
+        }
+
+        #description {
+            font-size: 70%;
+        }
+        #description.success {
+            color: #155724;
+        }
+        #description.failure {
+            color: #721c24;
+        }
+    </style>
 </head>
 <body>
+    <div class="row">
+        <textarea id="input" cols="30" rows="10"></textarea>
+    </div>
+    <div class="row">
+        <select id="type">
+            <option></option>
+            <option>data-url</option>
+            <option>blob</option>
+        </select>
+        <select id="mime">
+            <option></option>
+            <option>image/svg+xml</option>
+            <option>image/png</option>
+            <option>image/jpeg</option>
+            <option>image/webp</option>
+        </select>
+        <button id="render" onclick="render()">render</button>
+    </div>
 
+    <div class="row">
+        <div class="container-wrapper">
+            <div id="container"></div>
+        </div>
+    </div>
+
+    <div class="row">
+        <h2>result <span id="description"></span></h2>
+        <img id="result">
+    </div>
+
+    <script>
+        function render() {
+            container.innerHTML = input.value;
+
+            const imagesLoaded = [].slice.call(container.querySelectorAll('img'))
+                .map(function (img) {
+                    return new Promise(function (resolve) { img.onload = img.onerror = resolve; });
+                });
+
+            Promise.all(imagesLoaded)
+                .then(function () {
+                    return carbonite.render(container, {
+                        mime: mime.selectedOptions[0].textContent || undefined,
+                        type: type.selectedOptions[0].textContent || undefined,
+                    });
+                })
+                .then(function (resource) {
+                    result.src = resource.url;
+
+                    description.className = 'success';
+                    description.textContent = resource.type + ' ' + resource.mime;
+                })
+                .catch(function (error) {
+                    result.src = '';
+
+                    description.className = 'failure';
+                    description.textContent = error.message;
+                });
+        }
+    </script>
 </body>
 </html>

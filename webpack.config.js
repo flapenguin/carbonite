@@ -18,6 +18,6 @@ module.exports = {
         filename: 'carbonite.js',
         path: path.resolve(__dirname, 'dist'),
         library: 'carbonite',
-        libraryTarget: 'var'
+        libraryTarget: 'umd'
     }
 };
