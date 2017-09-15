@@ -30,7 +30,7 @@ Carbonite is using UMD pattern, so you can use it with require.js or SystemJS, o
  */
 function render(node: HTMLElement, options?: RenderOptions): Promise<Resource>;
 
-interface IRenderOptions {
+interface RenderOptions {
     /** Desired type of rendered image. */
     type?: ResourceType;
 
@@ -80,3 +80,10 @@ interface Csp {
     imageBlob?: boolean;
 }
 ```
+
+## Developing
+
+Carbonite is extracted from Maps API and should be written to allow simple integration back into it. Since Maps API still supports browsers like Internet Explorer 8 and Opera 12 and browsers with ES3 only there're some quirks you should follow:
+
+- Library should not produce `SyntaxError`s during parsing in IE 8 and Opera 12
+- Code using promises should be written in a way to be able to work with [vow 0.4.7](https://github.com/Ajaxy/vow/tree/57e1b832a69edbc15ee0e72907a45cb3389d48cc) promises
