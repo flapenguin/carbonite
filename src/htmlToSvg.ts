@@ -28,7 +28,7 @@ export function wrapHtmlInSvg(
     return `
         <svg xmlns="http://www.w3.org/2000/svg" width="${size.width}" height="${size.height}">
             <style ${csp.enabled ? `nonce="${csp.styleNonce}"` : ''}>
-                ${stylesheet.combine()}
+                ${stylesheet.combine().replace(/&/g, '&amp;')}
             </style>
             <foreignObject width="100%" height="100%">
                 <body xmlns="http://www.w3.org/1999/xhtml" class="${rootStyle}">
