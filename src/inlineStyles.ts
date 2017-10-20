@@ -55,7 +55,7 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
     const defaultStyle = clone(getComputedStyle(newNode));
     tempDom.dispose();
 
-    const styles: string[] = [];
+    const styles: Record<string, string> = {};
 
     // tslint:disable-next-line:prefer-for-of
     for (let i = 0; i < desiredStyle.length; i++) {
@@ -93,14 +93,14 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
             continue;
         }
 
-        styles.push(convertCssOmKeyToCssKey(key) + ':' + value + ';');
+        styles[key] = value;
     }
 
     // Try to save data from canvas.
     if (tagName === 'canvas') {
         try {
             const dataUrl = (node as HTMLCanvasElement).toDataURL();
-            styles.push(`background-image: url("${dataUrl}");`);
+            styles.backgroundImage = `url("${dataUrl}")`;
         } catch (e) {
             // nop
         }
@@ -110,11 +110,11 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
 
     // Try to save data from image.
     if (tagName === 'img') {
-        styles.push('display: block;');
+        styles.display = 'block';
         done = loadImageAsDataUrl(node as HTMLImageElement)
             .then((dataUrl) => {
                 if (dataUrl) {
-                    styles.push(`background-image: url("${dataUrl}");`);
+                    styles.backgroundImage = `url("${dataUrl}")`;
                 }
             })
             .catch((e) => { /* ignore */ });
@@ -130,7 +130,7 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
         // Setting CSSOM value directly makes XMLSerializer output them in style attribute.
         // This works in Chromiums, but Firefox fails to render foreignObject with style attributes.
         // https://bugzilla.mozilla.org/show_bug.cgi?id=1358106
-        newNode.className = stylesheet.createClass(styles.join(''));
+        newNode.className = stylesheet.createClass(styles);
 
         // Create inlined versions of child nodes and append them.
         const childPromises = [];
