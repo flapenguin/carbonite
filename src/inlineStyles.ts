@@ -17,7 +17,7 @@ const ignoredStyles = /^(transition|cursor|animation|userSelect)/;
 // Firefox doesn't build the full style, so for the example above, only borderTop will be set.
 const partialStyles = browser.engine !== 'webkit'
     ? /^(?=a)b/ // Dummy regex that fails on any string.
-    : /^(background|outline|border|webkitBorder(Before|After|End|Start))[A-Z]/;
+    : /^(background|outline|border(?!Radius)|webkitBorder(Before|After|End|Start))[A-Z]/;
 
 /**
  * Clone node hierarchy and inline all styles.
