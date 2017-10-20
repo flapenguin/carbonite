@@ -56,13 +56,13 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
     tempDom.dispose();
 
     const styles: string[] = [];
-    for (const key in desiredStyle) {
-        if (!desiredStyle.hasOwnProperty(key)) {
-            continue;
-        }
+
+    // tslint:disable-next-line:prefer-for-of
+    for (let i = 0; i < desiredStyle.length; i++) {
+        const key = desiredStyle.item(i);
 
         // Skip JavaScript stuff.
-        if (/^(\d+|length|cssText)$|-/.test(key)) {
+        if (/^(\d+|length|cssText)$/.test(key)) {
             continue;
         }
 
@@ -70,7 +70,9 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
             continue;
         }
 
-        let value = desiredStyle[key];
+        const desiredValue = desiredStyle.getPropertyValue(key);
+
+        let value = desiredValue;
         const type = typeof value;
 
         // Skip more JavaScript stuff.
@@ -81,7 +83,7 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
         const forced = forcedStyles.test(key);
 
         // Skip styles that are already implicitly applied to the node.
-        if (defaultStyle[key] === desiredStyle[key] && !forced) {
+        if (defaultStyle[key] === desiredValue && !forced) {
             continue;
         }
 
