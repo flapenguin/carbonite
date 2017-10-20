@@ -17,7 +17,7 @@ const ignoredStyles = /^(transition|cursor|animation|userSelect)/;
 // Firefox doesn't build the full style, so for the example above, only borderTop will be set.
 const partialStyles = browser.engine !== 'webkit'
     ? /^(?=a)b/ // Dummy regex that fails on any string.
-    : /^(background|outline|border|webkitBorder(Before|After|End|Start))[A-Z]/;
+    : /^(background|outline|border(?!Radius)|webkitBorder(Before|After|End|Start))[A-Z]/;
 
 /**
  * Clone node hierarchy and inline all styles.
@@ -55,14 +55,14 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
     const defaultStyle = clone(getComputedStyle(newNode));
     tempDom.dispose();
 
-    const styles: string[] = [];
-    for (const key in desiredStyle) {
-        if (!desiredStyle.hasOwnProperty(key)) {
-            continue;
-        }
+    const styles: Record<string, string> = {};
+
+    // tslint:disable-next-line:prefer-for-of
+    for (let i = 0; i < desiredStyle.length; i++) {
+        const key = desiredStyle.item(i);
 
         // Skip JavaScript stuff.
-        if (/^(\d+|length|cssText)$|-/.test(key)) {
+        if (/^(\d+|length|cssText)$/.test(key)) {
             continue;
         }
 
@@ -70,7 +70,9 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
             continue;
         }
 
-        let value = desiredStyle[key];
+        const desiredValue = desiredStyle.getPropertyValue(key);
+
+        let value = desiredValue;
         const type = typeof value;
 
         // Skip more JavaScript stuff.
@@ -81,7 +83,7 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
         const forced = forcedStyles.test(key);
 
         // Skip styles that are already implicitly applied to the node.
-        if (defaultStyle[key] === desiredStyle[key] && !forced) {
+        if (defaultStyle[key] === desiredValue && !forced) {
             continue;
         }
 
@@ -91,14 +93,14 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
             continue;
         }
 
-        styles.push(convertCssOmKeyToCssKey(key) + ':' + value + ';');
+        styles[key] = value;
     }
 
     // Try to save data from canvas.
     if (tagName === 'canvas') {
         try {
             const dataUrl = (node as HTMLCanvasElement).toDataURL();
-            styles.push(`background-image: url("${dataUrl}");`);
+            styles.backgroundImage = `url("${dataUrl}")`;
         } catch (e) {
             // nop
         }
@@ -108,11 +110,11 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
 
     // Try to save data from image.
     if (tagName === 'img') {
-        styles.push('display: block;');
+        styles.display = 'block';
         done = loadImageAsDataUrl(node as HTMLImageElement)
             .then((dataUrl) => {
                 if (dataUrl) {
-                    styles.push(`background-image: url("${dataUrl}");`);
+                    styles.backgroundImage = `url("${dataUrl}")`;
                 }
             })
             .catch((e) => { /* ignore */ });
@@ -128,7 +130,7 @@ function inlineElementStyles(node: HTMLElement, stylesheet: StyleSheet): Promise
         // Setting CSSOM value directly makes XMLSerializer output them in style attribute.
         // This works in Chromiums, but Firefox fails to render foreignObject with style attributes.
         // https://bugzilla.mozilla.org/show_bug.cgi?id=1358106
-        newNode.className = stylesheet.createClass(styles.join(''));
+        newNode.className = stylesheet.createClass(styles);
 
         // Create inlined versions of child nodes and append them.
         const childPromises = [];

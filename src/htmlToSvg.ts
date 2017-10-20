@@ -1,6 +1,8 @@
 import {Csp} from './csp';
 import {StyleSheet} from './StyleSheet';
 
+const xmlSerializer = new XMLSerializer();
+
 export interface Size {
     width: number;
     height: number;
@@ -15,7 +17,6 @@ export function wrapHtmlInSvg(
     size: Size,
     csp: Csp
 ): string {
-    const html = new XMLSerializer().serializeToString(node);
     const rootStyle = stylesheet.createClass({
         position: 'relative',
         width: '100%',
@@ -25,14 +26,18 @@ export function wrapHtmlInSvg(
         overflow: 'hidden'
     });
 
+    const style = document.createElement('style');
+    if (csp.enabled && csp.styleNonce) {
+        style.setAttribute('none', csp.styleNonce);
+    }
+    style.innerHTML = stylesheet.combine();
+
     return `
         <svg xmlns="http://www.w3.org/2000/svg" width="${size.width}" height="${size.height}">
-            <style ${csp.enabled ? `nonce="${csp.styleNonce}"` : ''}>
-                ${stylesheet.combine()}
-            </style>
+            ${xmlSerializer.serializeToString(style)}
             <foreignObject width="100%" height="100%">
                 <body xmlns="http://www.w3.org/1999/xhtml" class="${rootStyle}">
-                    ${html}
+                    ${xmlSerializer.serializeToString(node)}
                 </body>
             </foreignObject>
         </svg>
